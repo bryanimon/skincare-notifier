@@ -61,33 +61,53 @@ def parse_date(date_str):
  
     return None
  
-def send_email(product_name, expiry_date, days_until_expiry, category=""):
-    """Send email reminder"""
+def send_email_batch(products_list):
+    """Send a single email with all reminders in a table"""
     try:
         # Create email message
         msg = MIMEMultipart('alternative')
-        msg['Subject'] = f"⏰ Skincare Alert: {product_name} expiring in {days_until_expiry} days!"
+        msg['Subject'] = f"⏰ Skincare Reminders: {len(products_list)} product(s) need attention!"
         msg['From'] = SENDER_EMAIL
         msg['To'] = RECIPIENT_EMAIL
  
-        # Email body
-        category_text = f"<p><strong>Category:</strong> {category}</p>" if category else ""
+        # Build table rows
+        table_rows = ""
+        for product in products_list:
+            table_rows += f"""
+            <tr style="border-bottom: 1px solid #ddd;">
+              <td style="padding: 12px; border-right: 1px solid #ddd;">{product['name']}</td>
+              <td style="padding: 12px; border-right: 1px solid #ddd;">{product['category']}</td>
+              <td style="padding: 12px; border-right: 1px solid #ddd;">{product['expiry_date']}</td>
+              <td style="padding: 12px; color: #e91e63; font-weight: bold;">{product['days_until']} days</td>
+            </tr>
+            """
  
         html_body = f"""
         <html>
           <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <h2 style="color: #e91e63;">🧴 Skincare Product Expiration Reminder</h2>
+            <h2 style="color: #e91e63;">🧴 Skincare Product Expiration Reminders</h2>
  
-            <div style="background-color: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-              <p><strong style="font-size: 18px; color: #e91e63;">Product:</strong> {product_name}</p>
-              <p><strong>Expiry Date:</strong> {expiry_date}</p>
-              <p><strong>Days Until Expiry:</strong> <span style="color: #e91e63; font-weight: bold;">{days_until_expiry} days</span></p>
-              {category_text}
-            </div>
+            <p>You have <strong>{len(products_list)} product(s)</strong> to check:</p>
  
-            <p>⏰ <strong>Don't forget to use it up before it expires!</strong></p>
+            <table style="width: 100%; border-collapse: collapse; background-color: #f9f9f9; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+              <thead>
+                <tr style="background-color: #e91e63; color: white;">
+                  <th style="padding: 12px; text-align: left; border-right: 1px solid #ddd;">Product Name</th>
+                  <th style="padding: 12px; text-align: left; border-right: 1px solid #ddd;">Category</th>
+                  <th style="padding: 12px; text-align: left; border-right: 1px solid #ddd;">Expiry Date</th>
+                  <th style="padding: 12px; text-align: left;">Days Until Expiry</th>
+                </tr>
+              </thead>
+              <tbody>
+                {table_rows}
+              </tbody>
+            </table>
  
-            <p style="color: #999; font-size: 12px;">
+            <p style="margin-top: 20px; padding: 15px; background-color: #fff3e0; border-left: 4px solid #ff9800; border-radius: 4px;">
+              ⏰ <strong>Don't forget to use these products before they expire!</strong>
+            </p>
+ 
+            <p style="color: #999; font-size: 12px; margin-top: 20px;">
               This is an automated reminder from your Skincare Notifier.
             </p>
           </body>
@@ -101,10 +121,10 @@ def send_email(product_name, expiry_date, days_until_expiry, category=""):
             server.login(SENDER_EMAIL, SENDER_PASSWORD)
             server.send_message(msg)
  
-        print(f"✅ Email sent for {product_name}")
+        print(f"✅ Email sent with {len(products_list)} product(s)")
         return True
     except Exception as e:
-        print(f"❌ Error sending email for {product_name}: {e}")
+        print(f"❌ Error sending email: {e}")
         return False
  
 def check_and_notify():
@@ -173,13 +193,15 @@ def check_and_notify():
  
     # Only send emails if there are products to notify about
     if products_to_notify:
-        print(f"📧 Found {len(products_to_notify)} product(s) to notify about")
-        products_notified = 0
+        print(f"📧 Found {len(products_to_notify)} product(s) to notify about:")
         for product in products_to_notify:
             print(f"   - {product['name']} (expires {product['expiry_date']})")
-            if send_email(product['name'], product['expiry_date'], product['days_until'], product['category']):
-                products_notified += 1
-        print(f"\n✅ Notifier completed. {products_notified} notification(s) sent.")
+ 
+        # Send a single email with all products in a table
+        if send_email_batch(products_to_notify):
+            print(f"\n✅ Notifier completed. Email sent with {len(products_to_notify)} reminder(s).")
+        else:
+            print(f"\n❌ Notifier completed with errors.")
     else:
         print(f"✅ Notifier completed. No reminders for today - no emails sent.")
  
