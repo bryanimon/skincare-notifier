@@ -152,6 +152,7 @@ def check_and_notify():
         return
  
     now = datetime.now()
+    today = now.date()
     products_to_notify = []
  
     # Check each product and collect those that need reminders today
@@ -180,10 +181,11 @@ def check_and_notify():
             print(f"⚠️  Could not parse reminder date for {product_name}: {reminder_date_str}")
             continue
  
-        days_until_expiry = (expiry_date - now).days
+        days_until_expiry = (expiry_date.date() - today).days
+        days_since_reminder = (today - reminder_date.date()).days
  
-        # Check if today is the reminder date or past it
-        if now.date() >= reminder_date.date():
+        # Check if today is within the 3-day window starting on reminder_date (e.g., Aug 2, 3, 4)
+        if 0 <= days_since_reminder <= 2:
             products_to_notify.append({
                 'name': product_name,
                 'expiry_date': expiry_date.strftime('%Y-%m-%d'),
@@ -195,7 +197,7 @@ def check_and_notify():
     if products_to_notify:
         print(f"📧 Found {len(products_to_notify)} product(s) to notify about:")
         for product in products_to_notify:
-            print(f"   - {product['name']} (expires {product['expiry_date']})")
+            print(f"    - {product['name']} (expires {product['expiry_date']})")
  
         # Send a single email with all products in a table
         if send_email_batch(products_to_notify):
